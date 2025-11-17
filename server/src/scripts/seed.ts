@@ -1,4 +1,4 @@
-import { pool } from '../db/pool.ts'
+import { pool } from '../db/pool.js'
 
 async function seed() {
   console.log('🌱 Seeding database...')

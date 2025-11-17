@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { z } from 'zod'
-import { pool } from '../db/pool.ts'
-import { hashPassword, verifyPassword } from '../lib/password.ts'
-import { createToken } from '../lib/token.ts'
+import { pool } from '../db/pool.js'
+import { hashPassword, verifyPassword } from '../lib/password.js'
+import { createToken } from '../lib/token.js'
 
 const router = Router()
 

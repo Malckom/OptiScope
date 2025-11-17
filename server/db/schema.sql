@@ -38,11 +38,14 @@ CREATE TABLE IF NOT EXISTS option_legs (
 CREATE TABLE IF NOT EXISTS analytics_summaries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  trade_id UUID REFERENCES trades(id) ON DELETE CASCADE,
+  label TEXT NOT NULL DEFAULT 'portfolio',
+  report_date DATE NOT NULL DEFAULT current_date,
   snapshot JSONB NOT NULL,
-  calculated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  calculated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, label, report_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);
 CREATE INDEX IF NOT EXISTS idx_option_legs_trade_id ON option_legs(trade_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics_summaries(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_label_date ON analytics_summaries(label, report_date);

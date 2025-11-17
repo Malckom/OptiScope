@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { pool } from '../db/pool.ts'
+import { pool } from '../db/pool.js'
 
 async function main(): Promise<void> {
   const currentFile = fileURLToPath(import.meta.url)

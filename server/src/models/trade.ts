@@ -1,5 +1,5 @@
 import type { PoolClient } from 'pg'
-import { pool } from '../db/pool.ts'
+import { pool } from '../db/pool.js'
 
 type TradeStatus = 'open' | 'closed' | 'rolled'
 
@@ -148,6 +148,16 @@ export async function createTrade(
     return trade
   } catch (error) {
     await client.query('ROLLBACK')
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === '23503'
+    ) {
+      const friendly = new Error('User account not found for trade creation')
+      Object.assign(friendly, { status: 400 })
+      throw friendly
+    }
     throw error
   } finally {
     client.release()

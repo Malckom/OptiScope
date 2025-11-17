@@ -58,8 +58,100 @@ type TradeFormState = {
   notes: string
 }
 
+type MarketSnapshotResponse = {
+  symbol: string
+  price: number | null
+  changePercent: number | null
+  lastUpdated: string | null
+}
+
+type MarketInsightResponse = MarketSnapshotResponse & {
+  headline: string
+  bias: 'bullish' | 'bearish' | 'neutral'
+  summary: string
+  support: string
+  resistance: string
+  catalyst: string
+}
+
+type MarketSnapshotUI = {
+  symbol: string
+  price: string
+  change: string
+  direction: 'positive' | 'negative' | 'neutral'
+  lastUpdated: string | null
+}
+
+type MarketInsightUI = {
+  symbol: string
+  price: string
+  change: string
+  direction: 'positive' | 'negative' | 'neutral'
+  headline: string
+  bias: 'bullish' | 'bearish' | 'neutral'
+  summary: string
+  support: string
+  resistance: string
+  catalyst: string
+  lastUpdated: string | null
+}
+
+type MarketNewsArticle = {
+  id: string
+  title: string
+  url: string
+  source: string
+  summary: string
+  publishedAt: string
+  sentiment: 'Positive' | 'Negative' | 'Neutral'
+}
+
+type AnalyticsTotals = {
+  winRate: number
+  averagePnl: number
+  averagePnlPct: number
+  expectancy: number
+  averageHoldDays: number
+  closedTrades: number
+}
+
+type StrategyMetric = {
+  strategy: string
+  total: number
+  wins: number
+  losses: number
+  averagePnl: number
+}
+
+type EquityPoint = {
+  date: string
+  cumulativePnl: number
+}
+
+type HoldingBucket = {
+  bucket: string
+  count: number
+}
+
+type AnalyticsSnapshot = {
+  generatedAt: string
+  totals: AnalyticsTotals
+  strategyBreakdown: StrategyMetric[]
+  equityCurve: EquityPoint[]
+  holdingPeriods: HoldingBucket[]
+}
+
+type AnalyticsSummaryResponse = {
+  data: AnalyticsSnapshot
+  reportDate: string
+  calculatedAt: string
+  refreshed: boolean
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
 const AUTH_STORAGE_KEY = 'optiscope.auth'
+
+const featuredSymbols = ['NVDA', 'TSLA', 'MSFT']
 
 const features: StrategyFeature[] = [
   {
@@ -116,6 +208,135 @@ const scenarioLevers = [
   'Skew and surface shifts',
   'Custom hedge overlays'
 ]
+
+const heroBullets = [
+  'Intraday briefs distilled from 40+ market sources',
+  'AI-generated trade setups and risk callouts',
+  'Portfolio-grade analytics ready in under two minutes',
+]
+
+const trustSignals = ['Reuters', 'Dow Jones', 'FactSet', 'ArbSight', 'Marketscope']
+
+const heroMetrics = [
+  { value: '24/7', label: 'Market coverage' },
+  { value: '90s', label: 'Refresh cadence' },
+  { value: 'Global', label: 'Equities & options' },
+]
+
+function formatPrice(value: number | null): string {
+  if (value === null || Number.isNaN(value)) {
+    return '—'
+  }
+  return `$${value.toFixed(2)}`
+}
+
+function formatChange(changePercent: number | null): { text: string; direction: 'positive' | 'negative' | 'neutral' } {
+  if (changePercent === null || Number.isNaN(changePercent)) {
+    return { text: '—', direction: 'neutral' }
+  }
+
+  const direction: 'positive' | 'negative' | 'neutral' = changePercent > 0.05
+    ? 'positive'
+    : changePercent < -0.05
+      ? 'negative'
+      : 'neutral'
+
+  const sign = changePercent > 0 ? '+' : ''
+  return { text: `${sign}${changePercent.toFixed(2)}%`, direction }
+}
+
+function formatCurrency(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '$0.00'
+  }
+  const absolute = Math.abs(value).toFixed(2)
+  if (value > 0) {
+    return `+$${absolute}`
+  }
+  if (value < 0) {
+    return `-$${absolute}`
+  }
+  return '$0.00'
+}
+
+function formatPercent(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '0.00%'
+  }
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
+  return `${sign}${Math.abs(value).toFixed(2)}%`
+}
+
+function formatTimestamp(timestamp: string | null): string {
+  if (!timestamp) {
+    return '—'
+  }
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+  return date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatDateTime(timestamp: string | null): string {
+  if (!timestamp) {
+    return '—'
+  }
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatNewsTimestamp(timestamp: string): string {
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function toSnapshotUI(data: MarketSnapshotResponse): MarketSnapshotUI {
+  const { text, direction } = formatChange(data.changePercent)
+  return {
+    symbol: data.symbol.toUpperCase(),
+    price: formatPrice(data.price),
+    change: text,
+    direction,
+    lastUpdated: data.lastUpdated,
+  }
+}
+
+function toInsightUI(data: MarketInsightResponse): MarketInsightUI {
+  const { text, direction } = formatChange(data.changePercent)
+  return {
+    symbol: data.symbol.toUpperCase(),
+    price: formatPrice(data.price),
+    change: text,
+    direction,
+    headline: data.headline,
+    bias: data.bias,
+    summary: data.summary,
+    support: data.support,
+    resistance: data.resistance,
+    catalyst: data.catalyst,
+    lastUpdated: data.lastUpdated,
+  }
+}
 
 async function apiRequest<T>(
   path: string,
@@ -176,6 +397,27 @@ function App() {
     notes: '',
   })
 
+  const [marketSnapshots, setMarketSnapshots] = useState<MarketSnapshotUI[]>(
+    featuredSymbols.map((symbol) => ({
+      symbol,
+      price: '—',
+      change: '—',
+      direction: 'neutral',
+      lastUpdated: null,
+    })),
+  )
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(featuredSymbols[0])
+  const [marketInsight, setMarketInsight] = useState<MarketInsightUI | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [marketNews, setMarketNews] = useState<MarketNewsArticle[]>([])
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [newsError, setNewsError] = useState<string | null>(null)
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSnapshot | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null)
+  const [analyticsRefreshing, setAnalyticsRefreshing] = useState(false)
+
   useEffect(() => {
     const stored = window.localStorage.getItem(AUTH_STORAGE_KEY)
     if (stored) {
@@ -202,6 +444,7 @@ function App() {
   useEffect(() => {
     if (!auth) {
       setTrades([])
+      setAnalyticsSummary(null)
       return
     }
 
@@ -231,6 +474,187 @@ function App() {
       cancelled = true
     }
   }, [auth])
+
+  useEffect(() => {
+    if (!auth) {
+      setAnalyticsSummary(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadAnalytics = async () => {
+      setAnalyticsLoading(true)
+      setAnalyticsError(null)
+      try {
+        const payload = await apiRequest<AnalyticsSummaryResponse>(
+          '/api/analytics/summary',
+          {},
+          auth.token,
+        )
+        if (!cancelled) {
+          setAnalyticsSummary(payload.data)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAnalyticsError(error instanceof Error ? error.message : 'Unable to load analytics summary.')
+          setAnalyticsSummary(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setAnalyticsLoading(false)
+        }
+      }
+    }
+
+    void loadAnalytics()
+
+    return () => {
+      cancelled = true
+    }
+  }, [auth])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSnapshots = async () => {
+      try {
+        const params = featuredSymbols.join(',')
+        const payload = await apiRequest<{ data: MarketSnapshotResponse[] }>(
+          `/api/market/snapshots?symbols=${params}`,
+        )
+
+        if (!cancelled) {
+          setMarketSnapshots((prev) => {
+            const merged = new Map<string, MarketSnapshotUI>()
+            for (const item of prev) {
+              merged.set(item.symbol, item)
+            }
+            for (const item of payload.data.map(toSnapshotUI)) {
+              merged.set(item.symbol, item)
+            }
+
+            const ordered: MarketSnapshotUI[] = []
+            for (const symbol of featuredSymbols) {
+              if (merged.has(symbol)) {
+                ordered.push(merged.get(symbol)!)
+                merged.delete(symbol)
+              }
+            }
+
+            for (const item of merged.values()) {
+              ordered.push(item)
+            }
+
+            return ordered
+          })
+        }
+      } catch (error) {
+        console.warn('Failed to load market snapshots', error)
+      }
+    }
+
+    void loadSnapshots()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const ensureSnapshot = async () => {
+      try {
+        const payload = await apiRequest<{ data: MarketSnapshotResponse[] }>(
+          `/api/market/snapshots?symbols=${selectedSymbol}`,
+        )
+        if (!cancelled) {
+          const [snapshot] = payload.data
+          if (snapshot) {
+            setMarketSnapshots((prev) => {
+              const other = prev.filter((item) => item.symbol !== snapshot.symbol.toUpperCase())
+              return [toSnapshotUI(snapshot), ...other]
+            })
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to refresh snapshot', error)
+      }
+    }
+
+    void ensureSnapshot()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSymbol])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadInsight = async () => {
+      setAnalysisLoading(true)
+      setAnalysisError(null)
+      try {
+        const payload = await apiRequest<MarketInsightResponse>(
+          `/api/market/insight/${selectedSymbol}`,
+        )
+        if (!cancelled) {
+          setMarketInsight(toInsightUI(payload))
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAnalysisError(
+            error instanceof Error ? error.message : 'Unable to load market insight.',
+          )
+          setMarketInsight(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setAnalysisLoading(false)
+        }
+      }
+    }
+
+    void loadInsight()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSymbol])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadNews = async () => {
+      setNewsLoading(true)
+      setNewsError(null)
+      try {
+        const payload = await apiRequest<{ data: MarketNewsArticle[] }>(
+          `/api/market/news?symbols=${selectedSymbol}`,
+        )
+        if (!cancelled) {
+          setMarketNews(payload.data)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setNewsError(error instanceof Error ? error.message : 'Unable to load market news.')
+          setMarketNews([])
+        }
+      } finally {
+        if (!cancelled) {
+          setNewsLoading(false)
+        }
+      }
+    }
+
+    void loadNews()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSymbol])
 
   const hasAuth = Boolean(auth)
 
@@ -354,6 +778,28 @@ function App() {
     }
   }
 
+  const handleAnalyticsRefresh = async () => {
+    if (!auth) {
+      return
+    }
+
+    setAnalyticsRefreshing(true)
+    setAnalyticsError(null)
+
+    try {
+      const payload = await apiRequest<AnalyticsSummaryResponse>(
+        '/api/analytics/recalculate',
+        { method: 'POST' },
+        auth.token,
+      )
+      setAnalyticsSummary(payload.data)
+    } catch (error) {
+      setAnalyticsError(error instanceof Error ? error.message : 'Unable to refresh analytics.')
+    } finally {
+      setAnalyticsRefreshing(false)
+    }
+  }
+
   const handleLogout = () => {
     setAuth(null)
     setTrades([])
@@ -361,75 +807,140 @@ function App() {
   }
 
   const summarizedTrades = useMemo(() => trades.slice(0, 20), [trades])
+  const primarySnapshot = marketSnapshots[0]
+  const nextRefreshLabel = formatTimestamp(primarySnapshot?.lastUpdated ?? null)
+  const analyticsGeneratedLabel = analyticsSummary ? formatDateTime(analyticsSummary.generatedAt) : null
+  const equitySummary = useMemo(() => {
+    if (!analyticsSummary || analyticsSummary.equityCurve.length === 0) {
+      return null
+    }
+
+    const firstPoint = analyticsSummary.equityCurve[0]
+    const lastPoint = analyticsSummary.equityCurve[analyticsSummary.equityCurve.length - 1]
+
+    return {
+      start: firstPoint.cumulativePnl,
+      end: lastPoint.cumulativePnl,
+      change: lastPoint.cumulativePnl - firstPoint.cumulativePnl,
+      points: analyticsSummary.equityCurve.length,
+    }
+  }, [analyticsSummary])
+
+  const handleSymbolPrompt = () => {
+    const input = window.prompt('Enter a ticker symbol to analyze')
+    if (!input) {
+      return
+    }
+    const symbol = input.trim().toUpperCase()
+    if (!symbol) {
+      return
+    }
+
+    setMarketSnapshots((prev) => {
+      if (prev.some((item) => item.symbol === symbol)) {
+        return prev
+      }
+      return [
+        { symbol, price: '—', change: '—', direction: 'neutral', lastUpdated: null },
+        ...prev,
+      ]
+    })
+    setSelectedSymbol(symbol)
+  }
 
   return (
     <div className="page">
       <header className="hero" id="top">
         <nav className="navbar">
-          <div className="brand">OptiScope</div>
-          <div className="nav-links">
-            <a href="#features">Features</a>
-            <a href="#workflow">Workflow</a>
-            <a href="#scenarios">Scenarios</a>
+          <div className="nav-left">
+            <div className="brand">OptiScope</div>
+            <div className="nav-links">
+              <a href="#features">Product</a>
+              <a href="#workflow">How it works</a>
+              <a href="#scenarios">Scenario studio</a>
+              <a href="#cta">Get early access</a>
+            </div>
           </div>
-          <button className="nav-cta" type="button" onClick={primaryCTA}>
-            {hasAuth ? 'Open console' : 'Launch console'}
-          </button>
+          <div className="nav-actions">
+            <button className="nav-link-button" type="button" onClick={primaryCTA}>
+              {hasAuth ? 'Dashboard' : 'Log in'}
+            </button>
+            <button className="nav-cta" type="button" onClick={primaryCTA}>
+              Start for free
+            </button>
+          </div>
         </nav>
         <div className="hero-body">
           <div className="hero-copy">
-            <span className="tagline">AI-powered options intelligence</span>
-            <h1>Clarity and conviction for every multi-leg trade.</h1>
+            <span className="tagline">AI-powered market intelligence</span>
+            <h1>Smart stock market analysis without the research slog.</h1>
             <p>
-              OptiScope transforms your options portfolio into interactive strategy maps, real-time Greeks,
-              and proactive guidance so you can stay ahead of volatility without spreadsheet sprawl.
+              OptiScope distills real-time data, technicals, and macro catalysts into crisp summaries so you can
+              move from signal to execution faster than legacy terminals.
             </p>
+            <ul className="hero-bullets">
+              {heroBullets.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
             <div className="hero-actions">
               <button className="primary-action" type="button" onClick={primaryCTA}>
-                Launch trading console
+                Start free analysis
               </button>
-              <a className="secondary-action" href="#cta">
-                View product roadmap
+              <a className="secondary-action" href="#analysis">
+                Watch product tour
               </a>
             </div>
             <div className="hero-stats">
-              <div className="stat-card">
-                <span className="stat-value">45+</span>
-                <span className="stat-label">Strategies auto-detected</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">60s</span>
-                <span className="stat-label">Insight delivery per sync</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">0</span>
-                <span className="stat-label">Extra spreadsheets required</span>
+              {heroMetrics.map((metric) => (
+                <div key={metric.label} className="stat-card">
+                  <span className="stat-value">{metric.value}</span>
+                  <span className="stat-label">{metric.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="hero-trust">
+              <span>Trusted research signals from</span>
+              <div className="hero-trust-logos">
+                {trustSignals.map((signal) => (
+                  <span key={signal}>{signal}</span>
+                ))}
               </div>
             </div>
           </div>
           <div className="hero-visual">
             <div className="visual-card">
               <div className="visual-header">
-                <span>Live P/L Surface</span>
-                <span className="visual-status">Synced</span>
+                <span>Live Stock Pulse</span>
+                <span className="visual-status">Auto</span>
               </div>
-              <div className="visual-chart" aria-hidden="true">
-                <div className="chart-line" />
-                <div className="chart-line" />
-                <div className="chart-highlight" />
+              <ul className="ticker-list">
+                {marketSnapshots.slice(0, 3).map((ticker) => (
+                  <li key={ticker.symbol} className="ticker-item">
+                    <span className="ticker-symbol">{ticker.symbol}</span>
+                    <span className="ticker-price">{ticker.price}</span>
+                    <span className={`ticker-change ${ticker.direction}`}>{ticker.change}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="visual-analysis">
+                <p>
+                  AI summaries spotlight momentum, unusual flow, and macro catalysts so you can triage tickers before
+                  the next bell.
+                </p>
               </div>
               <div className="visual-footer">
                 <div>
-                  <strong>Portfolio Delta</strong>
-                  <span className="visual-metric positive">+0.42</span>
+                  <strong>Signal focus</strong>
+                  <span className="visual-metric">AI earnings drift</span>
                 </div>
                 <div>
-                  <strong>Theta (24h)</strong>
-                  <span className="visual-metric">-138</span>
+                  <strong>Confidence</strong>
+                  <span className="visual-metric positive">High</span>
                 </div>
                 <div>
-                  <strong>Vega Sensitivity</strong>
-                  <span className="visual-metric">Medium</span>
+                  <strong>Next refresh</strong>
+                  <span className="visual-metric">{nextRefreshLabel}</span>
                 </div>
               </div>
             </div>
@@ -438,6 +949,126 @@ function App() {
       </header>
 
       <main>
+        <section id="analysis" className="section analysis-preview">
+          <div className="section-heading">
+            <h2>Try our live stock analysis</h2>
+            <p>
+              Select a symbol to preview OptiScope&apos;s AI briefings, technical posture, and order flow signals in a
+              single glance.
+            </p>
+          </div>
+          <div className="analysis-grid">
+            <div className="analysis-tickers">
+              {marketSnapshots.map((ticker) => (
+                <button
+                  key={ticker.symbol}
+                  className={`analysis-chip ${ticker.symbol === selectedSymbol ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setSelectedSymbol(ticker.symbol)}
+                >
+                  <span>{ticker.symbol}</span>
+                  <span>{ticker.change}</span>
+                </button>
+              ))}
+              <button className="analysis-chip ghost" type="button" onClick={handleSymbolPrompt}>
+                <span>Add symbol</span>
+                <span>⌕</span>
+              </button>
+            </div>
+            <div className="analysis-summary">
+              {analysisLoading ? (
+                <div className="analysis-state">Loading insight…</div>
+              ) : analysisError ? (
+                <div className="analysis-state error">{analysisError}</div>
+              ) : marketInsight ? (
+                <>
+                  <header>
+                    <div>
+                      <span className="summary-label">AI headline</span>
+                      <h3>{marketInsight.headline}</h3>
+                    </div>
+                    <span className={`summary-signal ${marketInsight.bias}`}>
+                      {{
+                        bullish: 'Bullish bias',
+                        bearish: 'Bearish bias',
+                        neutral: 'Neutral bias',
+                      }[marketInsight.bias]}
+                    </span>
+                  </header>
+                  <p>{marketInsight.summary}</p>
+                  <dl>
+                    <div>
+                      <dt>Support</dt>
+                      <dd>{marketInsight.support}</dd>
+                    </div>
+                    <div>
+                      <dt>Resistance</dt>
+                      <dd>{marketInsight.resistance}</dd>
+                    </div>
+                    <div>
+                      <dt>Next catalyst</dt>
+                      <dd>{marketInsight.catalyst}</dd>
+                    </div>
+                  </dl>
+                  <div className="analysis-meta">
+                    <span>
+                      <strong>{marketInsight.symbol}</strong> {marketInsight.price}
+                    </span>
+                    <span className={`analysis-change ${marketInsight.direction}`}>
+                      {marketInsight.change}
+                    </span>
+                    <span>Updated {formatTimestamp(marketInsight.lastUpdated)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="analysis-state">Select a symbol to generate a briefing.</div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="section market-news">
+          <div className="section-heading">
+            <h2>Latest market news</h2>
+            <p>
+              AI-curated headlines tuned to your watchlist so you can gauge sentiment shifts and catalysts without
+              leaving OptiScope.
+            </p>
+          </div>
+          {newsLoading ? (
+            <div className="news-state">Scanning news feeds…</div>
+          ) : newsError ? (
+            <div className="news-state error">{newsError}</div>
+          ) : marketNews.length === 0 ? (
+            <div className="news-state">No recent headlines. Check back shortly.</div>
+          ) : (
+            <div className="news-grid">
+              {marketNews.map((article) => (
+                <article key={article.id} className="news-card">
+                  <header>
+                    <span className={`news-sentiment ${article.sentiment.toLowerCase()}`}>
+                      {article.sentiment}
+                    </span>
+                    <span className="news-source">{article.source}</span>
+                  </header>
+                  <h3>
+                    <a href={article.url} target="_blank" rel="noreferrer">
+                      {article.title}
+                    </a>
+                  </h3>
+                  <p>{article.summary}</p>
+                  <footer>
+                    <span>{formatNewsTimestamp(article.publishedAt)}</span>
+                    <a className="news-link" href={article.url} target="_blank" rel="noreferrer">
+                      Read more ↗
+                    </a>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section id="features" className="section features">
           <div className="section-heading">
             <h2>Everything you need to quantify risk in seconds</h2>
@@ -589,6 +1220,139 @@ function App() {
                 </div>
 
                 <div className="console-content">
+                  <section className="console-section">
+                    <div className="analytics-header">
+                      <div>
+                        <h4>Portfolio analytics</h4>
+                        <p className="section-subtle">
+                          {analyticsRefreshing
+                            ? 'Refreshing metrics…'
+                            : analyticsSummary
+                              ? `Last generated ${analyticsGeneratedLabel ?? 'recently'}`
+                              : analyticsLoading
+                                ? 'Generating analytics…'
+                                : 'Analytics refresh automatically after new trades are recorded.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="muted-button"
+                        onClick={handleAnalyticsRefresh}
+                        disabled={analyticsRefreshing || analyticsLoading}
+                      >
+                        {analyticsRefreshing ? 'Refreshing…' : 'Refresh analytics'}
+                      </button>
+                    </div>
+                    {analyticsError && <p className="form-error">{analyticsError}</p>}
+                    {analyticsLoading && !analyticsSummary ? (
+                      <div className="empty-state">Generating analytics…</div>
+                    ) : analyticsSummary ? (
+                      <>
+                        <div className="analytics-metrics">
+                          <div className="analytics-metric">
+                            <span className="metric-label">Win rate</span>
+                            <span className="metric-value">
+                              {Number.isFinite(analyticsSummary.totals.winRate)
+                                ? `${analyticsSummary.totals.winRate.toFixed(2)}%`
+                                : '0.00%'}
+                            </span>
+                          </div>
+                          <div className="analytics-metric">
+                            <span className="metric-label">Avg P/L</span>
+                            <span className={`metric-value ${analyticsSummary.totals.averagePnl >= 0 ? 'positive' : analyticsSummary.totals.averagePnl < 0 ? 'negative' : ''}`}>
+                              {formatCurrency(analyticsSummary.totals.averagePnl)}
+                            </span>
+                          </div>
+                          <div className="analytics-metric">
+                            <span className="metric-label">Avg P/L %</span>
+                            <span className={`metric-value ${analyticsSummary.totals.averagePnlPct >= 0 ? 'positive' : analyticsSummary.totals.averagePnlPct < 0 ? 'negative' : ''}`}>
+                              {formatPercent(analyticsSummary.totals.averagePnlPct)}
+                            </span>
+                          </div>
+                          <div className="analytics-metric">
+                            <span className="metric-label">Expectancy</span>
+                            <span className={`metric-value ${analyticsSummary.totals.expectancy >= 0 ? 'positive' : analyticsSummary.totals.expectancy < 0 ? 'negative' : ''}`}>
+                              {formatCurrency(analyticsSummary.totals.expectancy)}
+                            </span>
+                          </div>
+                          <div className="analytics-metric">
+                            <span className="metric-label">Avg hold</span>
+                            <span className="metric-value">{analyticsSummary.totals.averageHoldDays.toFixed(1)}d</span>
+                          </div>
+                          <div className="analytics-metric">
+                            <span className="metric-label">Closed trades</span>
+                            <span className="metric-value">{analyticsSummary.totals.closedTrades}</span>
+                          </div>
+                        </div>
+                        <div className="analytics-details">
+                          <div className="analytics-card">
+                            <h5>Strategy breakdown</h5>
+                            {analyticsSummary.strategyBreakdown.length === 0 ? (
+                              <p className="section-subtle">Need more closed trades to benchmark strategies.</p>
+                            ) : (
+                              <ul>
+                                {analyticsSummary.strategyBreakdown.slice(0, 4).map((item, index) => {
+                                  const winRate = item.total ? (item.wins / item.total) * 100 : 0
+                                  const winRateLabel = Number.isFinite(winRate)
+                                    ? `${winRate.toFixed(0)}%`
+                                    : '0%'
+                                  return (
+                                    <li key={`${item.strategy || 'unclassified'}-${index}`}>
+                                      <div>
+                                        <strong>{item.strategy || 'Unclassified'}</strong>
+                                        <span className="list-subtle">
+                                          {item.total} trades · Avg {formatCurrency(item.averagePnl)}
+                                        </span>
+                                      </div>
+                                      <span className={`metric-chip ${winRate > 50 ? 'positive' : winRate < 50 ? 'negative' : ''}`}>
+                                        {winRateLabel} win
+                                      </span>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="analytics-card">
+                            <h5>Holding periods</h5>
+                            {analyticsSummary.holdingPeriods.length === 0 ? (
+                              <p className="section-subtle">Start closing trades to populate holding periods.</p>
+                            ) : (
+                              <ul>
+                                {analyticsSummary.holdingPeriods.map((bucket) => (
+                                  <li key={bucket.bucket}>
+                                    <span>{bucket.bucket}</span>
+                                    <span>{bucket.count}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="analytics-card">
+                            <h5>Equity curve</h5>
+                            {equitySummary ? (
+                              <div className="equity-summary">
+                                <span className={`equity-change ${equitySummary.change > 0 ? 'positive' : equitySummary.change < 0 ? 'negative' : ''}`}>
+                                  {formatCurrency(equitySummary.change)}
+                                </span>
+                                <span className="equity-range">
+                                  {formatCurrency(equitySummary.start)} → {formatCurrency(equitySummary.end)}
+                                </span>
+                                <span className="equity-points">{equitySummary.points} data points</span>
+                              </div>
+                            ) : (
+                              <p className="section-subtle">We will chart your curve once you record more history.</p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="empty-state">
+                        <strong>No analytics yet.</strong>
+                        <span>Add closed trades to unlock portfolio analytics.</span>
+                      </div>
+                    )}
+                  </section>
                   <section className="console-section">
                     <h4>Add a trade</h4>
                     <p className="section-subtle">

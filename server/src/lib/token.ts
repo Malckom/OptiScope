@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { config } from '../config.ts'
+import { config } from '../config.js'
 
 interface TokenPayload {
   sub: string

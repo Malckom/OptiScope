@@ -7,12 +7,16 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import cors, { type CorsOptions } from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cron from 'node-cron';
 import { ZodError } from 'zod';
 
 // --- Internal modules (note .ts extensions for ESM + ts-node)
-import { config } from './config.ts';
-import authRouter from './routes/auth.ts';
-import tradesRouter from './routes/trades.ts';
+import { config } from './config.js';
+import authRouter from './routes/auth.js';
+import tradesRouter from './routes/trades.js';
+import analyticsRouter from './routes/analytics.js';
+import marketRouter from './routes/market.js';
+import { recalculateAnalyticsForAllUsers } from './tasks/analytics.js';
 
 // --- Initialize express app
 const app = express();
@@ -40,6 +44,8 @@ app.get('/health', (_req: Request, res: Response) => {
 // --- API routes
 app.use('/api/auth', authRouter);
 app.use('/api/trades', tradesRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/market', marketRouter);
 
 // --- 404 handler
 app.use((_req: Request, res: Response) => {
@@ -71,6 +77,16 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // --- Start server
+if (config.nodeEnv !== 'test') {
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      await recalculateAnalyticsForAllUsers();
+    } catch (error) {
+      console.error('Analytics cron failed', error);
+    }
+  });
+}
+
 app.listen(config.port, () => {
   console.log(`✅ API listening on port ${config.port}`);
 });

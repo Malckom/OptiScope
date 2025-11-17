@@ -7,9 +7,9 @@ import {
   listTrades,
   removeTrade,
   updateTrade,
-} from '../models/trade.ts'
-import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { requireAuth } from '../middleware/auth.ts'
+} from '../models/trade.js'
+import type { AuthenticatedRequest } from '../middleware/auth.js'
+import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
